@@ -44,6 +44,7 @@ docker-compose logs -f
 ```
 
 **📖 For detailed Docker documentation: [DOCKER.md](DOCKER.md)**
+**📚 Complete User Guide: [USER_GUIDE.md](USER_GUIDE.md)**
 
 ---
 
@@ -110,6 +111,10 @@ mop-generator/
 
 ## 🎯 Usage
 
+**📚 For detailed step-by-step instructions, see: [USER_GUIDE.md](USER_GUIDE.md)**
+
+### Quick Overview
+
 ### 1. Document Configuration
 - Fill in basic document information (title, version, category)
 - Add executive summary with execution timeline
@@ -132,6 +137,12 @@ mop-generator/
 ### 5. Generate MOP
 - Click "Generate Complete MOP Document"
 - Download professional HTML document with embedded images
+
+**💡 Pro Tips:**
+- Use Ctrl+V to paste screenshots directly into editors
+- Add custom borders to images for professional appearance  
+- Auto-save keeps your work safe every 30 seconds
+- Test all procedures in lab before production use
 
 ## 🖼️ Image Features
 
