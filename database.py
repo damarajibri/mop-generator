@@ -1,9 +1,10 @@
 """
 Database configuration and models for MOP Generator
-Supports both file-based (development) and PostgreSQL (production)
+Supports PostgreSQL (production), SQLite (development), and file-based (fallback)
 """
 
 import os
+import sqlite3
 from urllib.parse import urlparse
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -14,9 +15,10 @@ class DatabaseConfig:
     def __init__(self):
         self.database_url = os.environ.get('DATABASE_URL')
         self.use_database = self.database_url is not None
+        self.is_sqlite = self.database_url and self.database_url.startswith('sqlite:///')
         
-        if self.use_database:
-            # Parse database URL for connection
+        if self.use_database and not self.is_sqlite:
+            # Parse PostgreSQL database URL for connection
             url = urlparse(self.database_url)
             self.connection_params = {
                 'host': url.hostname,
@@ -34,19 +36,81 @@ class MOPDatabase:
     def __init__(self):
         self.config = DatabaseConfig()
     
+    def get_sqlite_connection(self):
+        """Get SQLite connection"""
+        db_path = self.config.database_url.replace('sqlite:///', '')
+        return sqlite3.connect(db_path)
+    
     def get_connection(self):
-        """Get database connection"""
+        """Get database connection - supports both PostgreSQL and SQLite"""
         if not self.config.use_database:
             raise Exception("Database not configured")
-        return psycopg2.connect(**self.config.connection_params)
+        
+        if self.config.is_sqlite:
+            return self.get_sqlite_connection()
+        else:
+            return psycopg2.connect(**self.config.connection_params)
     
     def execute_query(self, query, params=None, fetch=False):
-        """Execute a database query"""
+        """Execute a database query - supports both PostgreSQL and SQLite"""
         if not self.config.use_database:
             return None
             
         try:
-            with self.get_connection() as conn:
+            conn = self.get_connection()
+            
+            if self.config.is_sqlite:
+                # SQLite execution
+                cur = conn.cursor()
+                
+                # Convert PostgreSQL-style %(name)s parameters to SQLite ? style
+                if params and isinstance(params, dict):
+                    # Convert named parameters to positional for SQLite
+                    sqlite_query = query
+                    sqlite_params = []
+                    
+                    # Replace %(name)s with ? and collect values in order
+                    import re
+                    param_matches = re.findall(r'%\((\w+)\)s', query)
+                    for param_name in param_matches:
+                        sqlite_query = sqlite_query.replace(f'%({param_name})s', '?', 1)
+                        sqlite_params.append(params.get(param_name))
+                    
+                    cur.execute(sqlite_query, sqlite_params)
+                elif params:
+                    # Positional parameters
+                    sqlite_query = query.replace('%s', '?')  # Convert %s to ?
+                    cur.execute(sqlite_query, params)
+                else:
+                    cur.execute(query)
+                
+                if fetch:
+                    if query.strip().upper().startswith('SELECT'):
+                        # Return list of dicts for compatibility
+                        columns = [description[0] for description in cur.description]
+                        rows = cur.fetchall()
+                        result = [dict(zip(columns, row)) for row in rows]
+                        cur.close()
+                        conn.commit()
+                        conn.close()
+                        return result
+                    else:
+                        last_id = cur.lastrowid
+                        cur.close()
+                        conn.commit()
+                        result = {'id': last_id} if last_id else True
+                        conn.close()
+                        return result
+                
+                last_id = cur.lastrowid
+                cur.close()
+                conn.commit()
+                result = {'id': last_id} if last_id else True
+                conn.close()
+                return result
+                
+            else:
+                # PostgreSQL execution
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
                     cur.execute(query, params)
                     if fetch:
@@ -116,12 +180,26 @@ class MOPDatabase:
     def _save_devices(self, mop_id, devices):
         """Save devices to database"""
         for idx, device in enumerate(devices):
+            # Handle different field names from different data sources
+            device_name = (device.get('name') or 
+                          device.get('hostname') or 
+                          device.get('device_name') or 
+                          f'Device {idx + 1}')
+            
+            management_ip = (device.get('ip') or 
+                           device.get('mgmt_ip') or 
+                           device.get('management_ip'))
+            
+            device_type = (device.get('type') or 
+                          device.get('device_type'))
+            
+            location = device.get('location')
+            
             query = """
             INSERT INTO devices (mop_id, device_name, management_ip, location, device_type, order_index)
             VALUES (%s, %s, %s, %s, %s, %s)
             """
-            params = (mop_id, device['name'], device.get('ip'), device.get('location'), 
-                     device.get('type'), idx)
+            params = (mop_id, device_name, management_ip, location, device_type, idx)
             self.execute_query(query, params)
     
     def _save_network_configs(self, mop_id, configs):
