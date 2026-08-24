@@ -8,6 +8,14 @@ import socket
 import base64
 import mimetypes
 
+# Import database functionality
+try:
+    from database import db
+    DATABASE_AVAILABLE = True
+except ImportError:
+    DATABASE_AVAILABLE = False
+    db = None
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mop-generator-secret-2026'
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -69,7 +77,30 @@ def save_mop():
     try:
         data = request.json or {}
         
-        # Generate unique filename
+        # Try database first, fallback to file
+        if DATABASE_AVAILABLE and db and db.config.use_database:
+            result = db.save_mop_document(data)
+            if result:
+                # Still generate HTML for download
+                html_content = generate_safe_html(data)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"MOP_{timestamp}_{uuid.uuid4().hex[:8]}"
+                html_path = os.path.join('generated_mops', f"{filename}.html")
+                with open(html_path, 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'MOP saved to database successfully!',
+                    'filename': filename,
+                    'database_id': result['id'],
+                    'download_urls': {
+                        'html': f"/download/{filename}.html",
+                        'json': f"/api/mop/{result['id']}"
+                    }
+                })
+        
+        # Fallback to file-based storage
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"MOP_{timestamp}_{uuid.uuid4().hex[:8]}"
         
@@ -523,7 +554,11 @@ def generate_device_sections(device_impls, devices_info, image_formatter):
         return "<p>Error formatting device sections</p>"
 
 if __name__ == '__main__':
-    port = find_free_port()
+    # Use PORT environment variable for cloud deployment, fallback to local port finding
+    port = int(os.environ.get('PORT', find_free_port()))
     print(f"🚀 MOP Generator starting on port {port}")
     print(f"📱 Access at: http://localhost:{port}")
-    app.run(debug=False, host='0.0.0.0', port=port)
+    
+    # Disable debug in production
+    debug_mode = os.environ.get('FLASK_ENV') != 'production'
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
