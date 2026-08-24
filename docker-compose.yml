@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mop_postgres
+    environment:
+      POSTGRES_DB: mop_generator
+      POSTGRES_USER: mop_user
+      POSTGRES_PASSWORD: mop_password_2026
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    networks:
+      - mop_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mop_user -d mop_generator"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MOP Generator Web Application
+  web:
+    build: .
+    container_name: mop_generator
+    environment:
+      - DATABASE_URL=postgresql://mop_user:mop_password_2026@postgres:5432/mop_generator
+      - FLASK_ENV=production
+      - FLASK_SECRET_KEY=mop-generator-docker-secret-2026
+      - PORT=8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./generated_mops:/app/generated_mops
+    networks:
+      - mop_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis for session management (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: mop_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - mop_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  mop_network:
+    driver: bridge

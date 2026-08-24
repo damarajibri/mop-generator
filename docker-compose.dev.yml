@@ -1,0 +1,53 @@
+version: '3.8'
+
+# Development version with hot reload and debug mode
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mop_postgres_dev
+    environment:
+      POSTGRES_DB: mop_generator_dev
+      POSTGRES_USER: mop_dev
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./database_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    networks:
+      - mop_dev_network
+
+  # MOP Generator Web Application (Development)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: mop_generator_dev
+    environment:
+      - DATABASE_URL=postgresql://mop_dev:dev_password@postgres:5432/mop_generator_dev
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - FLASK_SECRET_KEY=dev-secret-key
+      - PORT=5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app  # Mount source code for hot reload
+      - dev_uploads:/app/uploads
+      - dev_generated:/app/generated_mops
+    networks:
+      - mop_dev_network
+    depends_on:
+      - postgres
+    command: ["python", "app.py"]
+
+volumes:
+  postgres_dev_data:
+  dev_uploads:
+  dev_generated:
+
+networks:
+  mop_dev_network:
+    driver: bridge
