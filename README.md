@@ -45,6 +45,7 @@ docker-compose logs -f
 
 **📖 For detailed Docker documentation: [DOCKER.md](DOCKER.md)**
 **📚 Complete User Guide: [USER_GUIDE.md](USER_GUIDE.md)**
+**📋 Quick Reference Card: [QUICK_REFERENCE.md](QUICK_REFERENCE.md)**
 
 ---
 
