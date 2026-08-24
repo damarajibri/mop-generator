@@ -2,6 +2,51 @@
 
 A comprehensive web-based application for creating professional Method of Procedure (MOP) documents with advanced text editing, image capture, and technical configuration management capabilities.
 
+## 🚀 Quick Start with Docker (Recommended)
+
+### **One-Command Setup:**
+```bash
+git clone https://github.com/damarajibri/mop-generator.git
+cd mop-generator
+./docker-check.sh  # Verify Docker setup
+./docker-deploy.sh # Choose option 1 for full stack
+```
+
+### **Access your application:**
+🌐 **http://localhost:8080**
+
+### **What you get:**
+- ✅ **Complete MOP Generator** with rich text editing
+- ✅ **PostgreSQL database** for data persistence  
+- ✅ **Redis cache** for performance
+- ✅ **Professional UI** with image upload support
+- ✅ **Production-ready** containerized setup
+
+---
+
+## 🐳 Docker Commands
+
+```bash
+# Full stack (Web + Database + Cache)
+docker-compose up -d
+
+# Development with hot reload  
+docker-compose -f docker-compose.dev.yml up -d
+
+# Web application only
+docker run -p 8080:8080 mop-generator
+
+# Stop all services
+docker-compose down
+
+# View logs
+docker-compose logs -f
+```
+
+**📖 For detailed Docker documentation: [DOCKER.md](DOCKER.md)**
+
+---
+
 ## 🚀 Features
 
 ### Core Functionality
