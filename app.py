@@ -8,18 +8,53 @@ import socket
 import base64
 import mimetypes
 
+# Load environment variables from .env file
+def load_env_file():
+    """Load environment variables from .env file"""
+    try:
+        env_path = os.path.join(os.path.dirname(__file__), '.env')
+        if os.path.exists(env_path):
+            with open(env_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and '=' in line and not line.startswith('#'):
+                        key, value = line.split('=', 1)
+                        os.environ[key] = value
+            print(f"✅ Environment loaded from .env")
+        else:
+            print(f"⚠️  No .env file found at {env_path}")
+    except Exception as e:
+        print(f"❌ Error loading .env: {e}")
+
+# Load environment before importing database
+load_env_file()
+
 # Import database functionality
 try:
     from database import db
     DATABASE_AVAILABLE = True
-except ImportError:
+    if db and db.config.use_database:
+        print(f"✅ Database available: {db.config.database_url}")
+    else:
+        print(f"⚠️  Database configured but not active")
+except ImportError as e:
     DATABASE_AVAILABLE = False
     db = None
+    print(f"❌ Database import failed: {e}")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mop-generator-secret-2026'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+# Add CORS headers to all responses
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # Ensure directories exist
 os.makedirs('uploads', exist_ok=True)
@@ -128,6 +163,335 @@ def save_mop():
     except Exception as e:
         print(f"Error in save_mop: {e}")
         return jsonify({'success': False, 'message': f'Error generating MOP: {str(e)}'})
+
+@app.route('/api/mop_history', methods=['GET'])
+def get_mop_history():
+    """Get MOP history with pagination"""
+    try:
+        # Get pagination parameters
+        page = int(request.args.get('page', 1))
+        page_size = int(request.args.get('page_size', 10))
+        
+        # Validate page_size (max 100)
+        if page_size > 100:
+            page_size = 100
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
+        
+        if DATABASE_AVAILABLE and db and db.config.use_database:
+            # Get data from database
+            conn = db.get_connection()
+            
+            if db.config.is_sqlite:
+                cursor = conn.cursor()
+                
+                # Get total count
+                cursor.execute("SELECT COUNT(*) FROM mop_documents")
+                total_count = cursor.fetchone()[0]
+                
+                # Get paginated data
+                cursor.execute("""
+                    SELECT id, title, activity_name, created_at, updated_at
+                    FROM mop_documents 
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT ? OFFSET ?
+                """, (page_size, offset))
+                
+                rows = cursor.fetchall()
+                history_data = []
+                
+                for i, row in enumerate(rows):
+                    history_data.append({
+                        'id': row[0],
+                        'no': offset + i + 1,
+                        'title': row[1] or 'Untitled Document',
+                        'activity_name': row[2] or 'General Activity',
+                        'created_at': row[3],
+                        'updated_at': row[4]
+                    })
+                
+                cursor.close()
+                conn.close()
+                
+            else:
+                # PostgreSQL version (future implementation)
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    # Get total count
+                    cur.execute("SELECT COUNT(*) FROM mop_documents")
+                    total_count = cur.fetchone()['count']
+                    
+                    # Get paginated data
+                    cur.execute("""
+                        SELECT id, title, category, created_at, updated_at
+                        FROM mop_documents 
+                        ORDER BY created_at DESC, id DESC
+                        LIMIT %s OFFSET %s
+                    """, (page_size, offset))
+                    
+                    rows = cur.fetchall()
+                    history_data = []
+                    
+                    for i, row in enumerate(rows):
+                        history_data.append({
+                            'id': row['id'],
+                            'no': offset + i + 1,
+                            'title': row['title'] or 'Untitled Document',
+                            'activity_name': row['category'] or 'General Activity',
+                            'created_at': row['created_at'],
+                            'updated_at': row['updated_at']
+                        })
+            
+            # Calculate pagination info
+            total_pages = (total_count + page_size - 1) // page_size
+            
+            return jsonify({
+                'success': True,
+                'data': history_data,
+                'pagination': {
+                    'current_page': page,
+                    'page_size': page_size,
+                    'total_count': total_count,
+                    'total_pages': total_pages,
+                    'has_previous': page > 1,
+                    'has_next': page < total_pages
+                }
+            })
+        
+        else:
+            # Fallback to file-based data
+            import glob
+            json_files = glob.glob('generated_mops/*.json')
+            
+            # Sort by modification time (newest first)
+            json_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+            
+            total_count = len(json_files)
+            
+            # Paginate file list
+            start_idx = offset
+            end_idx = start_idx + page_size
+            paginated_files = json_files[start_idx:end_idx]
+            
+            history_data = []
+            for i, json_file in enumerate(paginated_files):
+                try:
+                    with open(json_file, 'r', encoding='utf-8') as f:
+                        mop_data = json.load(f)
+                    
+                    # Extract title and activity name
+                    title = (mop_data.get('document_title') or 
+                            mop_data.get('title') or 
+                            'Untitled Document')
+                    activity_name = (mop_data.get('activity_name') or 
+                                   mop_data.get('category') or 
+                                   'General Activity')
+                    
+                    # Use global file index instead of paginated index
+                    global_index = start_idx + i
+                    
+                    history_data.append({
+                        'id': f"file_{global_index}",
+                        'filename': os.path.basename(json_file),
+                        'no': global_index + 1,
+                        'title': title[:60] + '...' if len(title) > 60 else title,
+                        'activity_name': activity_name,
+                        'created_at': datetime.fromtimestamp(os.path.getmtime(json_file)).isoformat()
+                    })
+                except Exception as e:
+                    print(f"Error reading {json_file}: {e}")
+                    continue
+            
+            # Calculate pagination info
+            total_pages = (total_count + page_size - 1) // page_size
+            
+            return jsonify({
+                'success': True,
+                'data': history_data,
+                'pagination': {
+                    'current_page': page,
+                    'page_size': page_size,
+                    'total_count': total_count,
+                    'total_pages': total_pages,
+                    'has_previous': page > 1,
+                    'has_next': page < total_pages
+                }
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error retrieving MOP history: {str(e)}'
+        })
+
+@app.route('/api/mop_detail/<mop_id>', methods=['GET'])
+def get_mop_detail(mop_id):
+    """Get detailed MOP data by ID - UPDATED to use ALL database columns"""
+    try:
+        if DATABASE_AVAILABLE and db and db.config.use_database:
+            # Get data from database
+            conn = db.get_connection()
+            
+            if db.config.is_sqlite:
+                cursor = conn.cursor()
+                
+                # Get ALL columns from database (comprehensive approach)
+                cursor.execute("SELECT * FROM mop_documents WHERE id = ?", (mop_id,))
+                doc_row = cursor.fetchone()
+                
+                if not doc_row:
+                    return jsonify({'success': False, 'message': 'MOP not found'})
+                
+                # Get column names to map data correctly
+                cursor.execute("PRAGMA table_info(mop_documents)")
+                columns_info = cursor.fetchall()
+                column_names = [col[1] for col in columns_info]
+                
+                # Create comprehensive mapping from database row to MOP data
+                mop_data = {}
+                
+                # Map all database columns to mop_data
+                for i, column_name in enumerate(column_names):
+                    if i < len(doc_row):
+                        value = doc_row[i]
+                        mop_data[column_name] = value
+                
+                # Ensure backward compatibility with key fields
+                mop_data['title'] = mop_data.get('document_title') or mop_data.get('title', 'Untitled')
+                mop_data['summary'] = mop_data.get('summary') or mop_data.get('executive_summary', '')
+                
+                # Initialize empty arrays for related data
+                mop_data['devices'] = []
+                mop_data['networkConfigs'] = []
+                mop_data['risks'] = []
+                
+                # Get devices
+                cursor.execute("""
+                    SELECT device_name, management_ip, location, device_type
+                    FROM devices WHERE mop_id = ? ORDER BY order_index
+                """, (mop_id,))
+                
+                device_rows = cursor.fetchall()
+                for device_row in device_rows:
+                    mop_data['devices'].append({
+                        'hostname': device_row[0],
+                        'name': device_row[0],
+                        'mgmt_ip': device_row[1],
+                        'ip': device_row[1],
+                        'location': device_row[2],
+                        'type': device_row[3]
+                    })
+                
+                # Get network configs
+                cursor.execute("""
+                    SELECT real_ip, nat_ip, palo_alto_zone, vlan_id, description
+                    FROM network_configs WHERE mop_id = ?
+                """, (mop_id,))
+                
+                config_rows = cursor.fetchall()
+                for config_row in config_rows:
+                    mop_data['networkConfigs'].append({
+                        'realIp': config_row[0],
+                        'natIp': config_row[1],
+                        'paloAltoZone': config_row[2],
+                        'vlanId': config_row[3],
+                        'description': config_row[4]
+                    })
+                
+                # Get risks
+                cursor.execute("""
+                    SELECT risk_type, risk_description, impact_score, probability_score, 
+                           mitigation_plan, contingency_plan
+                    FROM risk_assessments WHERE mop_id = ? ORDER BY order_index
+                """, (mop_id,))
+                
+                risk_rows = cursor.fetchall()
+                for risk_row in risk_rows:
+                    mop_data['risks'].append({
+                        'type': risk_row[0],
+                        'description': risk_row[1],
+                        'impact': risk_row[2],
+                        'probability': risk_row[3],
+                        'mitigation': risk_row[4],
+                        'contingency': risk_row[5]
+                    })
+                
+                cursor.close()
+                conn.close()
+                
+                return jsonify({
+                    'success': True,
+                    'data': mop_data
+                })
+            
+        
+        else:
+            # Fallback to file-based data
+            if mop_id.startswith('file_'):
+                # Handle file-based ID from history
+                try:
+                    import glob
+                    json_files = glob.glob('generated_mops/*.json')
+                    json_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+                    
+                    # Extract file index from mop_id (file_0, file_1, etc.)
+                    file_index = int(mop_id.split('_')[1])
+                    
+                    if file_index < len(json_files):
+                        json_file = json_files[file_index]
+                        
+                        with open(json_file, 'r', encoding='utf-8') as f:
+                            mop_data = json.load(f)
+                        
+                        # File already has complete structure, just ensure consistent field names
+                        if 'document_title' in mop_data and 'title' not in mop_data:
+                            mop_data['title'] = mop_data['document_title']
+                        elif 'title' in mop_data and 'document_title' not in mop_data:
+                            mop_data['document_title'] = mop_data['title']
+                        
+                        # Ensure summary field consistency
+                        if 'executive_summary' in mop_data and 'summary' not in mop_data:
+                            mop_data['summary'] = mop_data['executive_summary']
+                        elif 'summary' in mop_data and 'executive_summary' not in mop_data:
+                            mop_data['executive_summary'] = mop_data['summary']
+                        
+                        # Ensure networkConfigs field exists (from JSON it might be different key)
+                        if 'networkConfigs' not in mop_data:
+                            mop_data['networkConfigs'] = []
+                        
+                        # Ensure risks field exists 
+                        if 'risks' not in mop_data:
+                            mop_data['risks'] = []
+                        
+                        print(f"✅ Loaded complete file data with {len(mop_data)} fields")
+                        
+                        return jsonify({
+                            'success': True,
+                            'data': mop_data
+                        })
+                    else:
+                        return jsonify({
+                            'success': False,
+                            'message': 'File not found'
+                        })
+                        
+                except Exception as e:
+                    return jsonify({
+                        'success': False,
+                        'message': f'Error reading file: {str(e)}'
+                    })
+            else:
+                # Try to find by database ID but database not available
+                return jsonify({
+                    'success': False,
+                    'message': 'Database not available and invalid file ID format'
+                })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error retrieving MOP detail: {str(e)}'
+        })
 
 @app.route('/download/<filename>')
 def download_file(filename):

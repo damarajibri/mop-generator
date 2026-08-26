@@ -125,58 +125,190 @@ class MOPDatabase:
             return None
     
     def save_mop_document(self, mop_data):
-        """Save MOP document to database"""
+        """Save MOP document with comprehensive field mapping - ULTIMATE VERSION"""
         if not self.config.use_database:
             return self._save_mop_file(mop_data)
         
         try:
-            # Insert main document
-            insert_doc_query = """
-            INSERT INTO mop_documents (title, version, category, priority, execution_date, 
-                                     execution_time, duration_minutes, business_justification, 
-                                     executive_summary, status)
-            VALUES (%(title)s, %(version)s, %(category)s, %(priority)s, %(execution_date)s,
-                    %(execution_time)s, %(duration_minutes)s, %(business_justification)s,
-                    %(executive_summary)s, 'draft')
-            RETURNING id
-            """
+            print(f"🔍 Saving MOP with {len(mop_data)} input fields...")
             
-            doc_params = {
-                'title': mop_data.get('title', 'Untitled MOP'),
-                'version': mop_data.get('version', '1.0'),
-                'category': mop_data.get('category'),
-                'priority': mop_data.get('priority'),
-                'execution_date': mop_data.get('execution_date'),
-                'execution_time': mop_data.get('execution_time'),
-                'duration_minutes': mop_data.get('duration_minutes'),
-                'business_justification': mop_data.get('business_justification'),
-                'executive_summary': mop_data.get('executive_summary')
-            }
-            
-            result = self.execute_query(insert_doc_query, doc_params, fetch=True)
-            if not result:
-                return None
+            if self.config.is_sqlite:
+                conn = self.get_connection()
+                cursor = conn.cursor()
                 
-            mop_id = result['id']
+                # Step 1: Insert basic required fields first
+                basic_query = """
+                INSERT INTO mop_documents (title, version, category, priority, 
+                                         business_justification, executive_summary)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """
+                
+                basic_values = [
+                    mop_data.get('title') or mop_data.get('document_title', 'Untitled MOP'),
+                    mop_data.get('version', '1.0'),
+                    mop_data.get('category'),
+                    mop_data.get('priority'),
+                    mop_data.get('business_justification'),
+                    mop_data.get('executive_summary')
+                ]
+                
+                cursor.execute(basic_query, basic_values)
+                mop_id = cursor.lastrowid
+                print(f"✅ Basic MOP created with ID: {mop_id}")
+                
+                # Step 2: Update with all extended fields individually
+                update_fields = {
+                    # Document fields
+                    'document_title': mop_data.get('document_title') or mop_data.get('title'),
+                    'activity_name': mop_data.get('activity_name'),
+                    'work_type': mop_data.get('work_type'),
+                    'issue_date': mop_data.get('issue_date'),
+                    'execution_time': mop_data.get('execution_time'),
+                    'total_duration': mop_data.get('total_duration'),
+                    'affected_services': mop_data.get('affected_services'),
+                    'downtime': mop_data.get('downtime'),
+                    'summary': mop_data.get('summary') or mop_data.get('executive_summary'),
+                    
+                    # Technical Prerequisites
+                    'hardware_requirements': mop_data.get('hardware_requirements'),
+                    'software_dependencies': mop_data.get('software_dependencies'),
+                    'network_prerequisites': mop_data.get('network_prerequisites'),
+                    'security_requirements': mop_data.get('security_requirements'),
+                    'personnel_requirements': mop_data.get('personnel_requirements'),
+                    'external_dependencies': mop_data.get('external_dependencies'),
+                    
+                    # Risk Assessment
+                    'overall_risk_level': mop_data.get('overall_risk_level'),
+                    'risk_owner': mop_data.get('risk_owner'),
+                    'contingency_plan': mop_data.get('contingency_plan'),
+                    
+                    # Implementation Timeline
+                    'prep_start_time': mop_data.get('prep_start_time'),
+                    'prep_phase_duration': mop_data.get('prep_phase_duration'),
+                    'prep_activities': mop_data.get('prep_activities'),
+                    'impl_start_time': mop_data.get('impl_start_time'),
+                    'impl_phase_duration': mop_data.get('impl_phase_duration'),
+                    'impl_activities': mop_data.get('impl_activities'),
+                    'verification_start_time': mop_data.get('verification_start_time'),
+                    'verification_duration': mop_data.get('verification_duration'),
+                    'verification_activities': mop_data.get('verification_activities'),
+                    
+                    # Communication Plan
+                    'communication_frequency': mop_data.get('communication_frequency', '15min'),
+                    'notification_list': mop_data.get('notification_list'),
+                    'technical_success_criteria': mop_data.get('technical_success_criteria'),
+                    'business_success_criteria': mop_data.get('business_success_criteria'),
+                    
+                    # Post-Implementation
+                    'monitoring_duration': mop_data.get('monitoring_duration', '24h'),
+                    'monitoring_frequency': mop_data.get('monitoring_frequency', 'continuous'),
+                    'monitoring_team': mop_data.get('monitoring_team'),
+                    
+                    # Rollback Procedures
+                    'rollback_commands': mop_data.get('rollback_commands'),
+                    'service_impact_level': mop_data.get('service_impact_level'),
+                    'affected_processes': mop_data.get('affected_processes'),
+                    'business_impact_cost': mop_data.get('business_impact_cost'),
+                    'system_impact_level': mop_data.get('system_impact_level'),
+                    'affected_systems': mop_data.get('affected_systems'),
+                    'recovery_time_objective': mop_data.get('recovery_time_objective'),
+                    'rollback_technical_validation': mop_data.get('rollback_technical_validation'),
+                    'rollback_business_validation': mop_data.get('rollback_business_validation'),
+                    
+                    # Approval Signatures
+                    'tech_reviewer_name': mop_data.get('tech_reviewer_name'),
+                    'tech_reviewer_position': mop_data.get('tech_reviewer_position'),
+                    'tech_reviewer_contact': mop_data.get('tech_reviewer_contact'),
+                    'tech_review_date': mop_data.get('tech_review_date'),
+                    'manager_name': mop_data.get('manager_name'),
+                    'manager_position': mop_data.get('manager_position'),
+                    'manager_contact': mop_data.get('manager_contact'),
+                    'manager_approval_date': mop_data.get('manager_approval_date'),
+                    'final_approver_name': mop_data.get('final_approver_name'),
+                    'final_approver_title': mop_data.get('final_approver_title'),
+                    'final_approver_contact': mop_data.get('final_approver_contact'),
+                    'final_approval_date': mop_data.get('final_approval_date'),
+                    
+                    # Implementation Status
+                    'implementation_status': mop_data.get('implementation_status', 'planned'),
+                    'actual_start_time': mop_data.get('actual_start_time'),
+                    'actual_end_time': mop_data.get('actual_end_time'),
+                    'implementation_notes': mop_data.get('implementation_notes'),
+                    
+                    # Technical Details
+                    'service_name': mop_data.get('service_name'),
+                    'service_version': mop_data.get('service_version'),
+                    'service_ports': mop_data.get('service_ports'),
+                    'config_file_paths': mop_data.get('config_file_paths'),
+                    'database_connections': mop_data.get('database_connections'),
+                    'admin_accounts': mop_data.get('admin_accounts'),
+                    'auth_method': mop_data.get('auth_method'),
+                    'firewall_rules': mop_data.get('firewall_rules'),
+                    'ssl_certificates': mop_data.get('ssl_certificates'),
+                    
+                    # Backup & Recovery
+                    'backup_locations': mop_data.get('backup_locations'),
+                    'backup_commands': mop_data.get('backup_commands'),
+                    'rpo_target': mop_data.get('rpo_target'),
+                    'rto_target': mop_data.get('rto_target'),
+                    'environment_type': mop_data.get('environment_type', 'production'),
+                    'datacenter_location': mop_data.get('datacenter_location'),
+                    'maintenance_window': mop_data.get('maintenance_window')
+                }
+                
+                # Update fields that have values - one by one for reliability
+                updated_count = 0
+                for field_name, field_value in update_fields.items():
+                    if field_value is not None and field_value != '':
+                        try:
+                            cursor.execute(f"UPDATE mop_documents SET {field_name} = ? WHERE id = ?", 
+                                         (field_value, mop_id))
+                            updated_count += 1
+                        except Exception as e:
+                            print(f"⚠️  Failed to update {field_name}: {e}")
+                
+                print(f"✅ Updated {updated_count} extended fields")
+                
+                # Handle boolean fields separately
+                bool_fields = {
+                    'cert_technical': mop_data.get('cert_technical', False),
+                    'cert_testing': mop_data.get('cert_testing', False),
+                    'cert_documentation': mop_data.get('cert_documentation', False),
+                    'cert_stakeholder': mop_data.get('cert_stakeholder', False)
+                }
+                
+                for bool_field, bool_value in bool_fields.items():
+                    try:
+                        cursor.execute(f"UPDATE mop_documents SET {bool_field} = ? WHERE id = ?",
+                                     (1 if bool_value else 0, mop_id))
+                    except Exception as e:
+                        print(f"⚠️  Failed to update {bool_field}: {e}")
+                
+                conn.commit()
+                cursor.close()
+                conn.close()
+                
+                # Save related data
+                if mop_id:
+                    if 'devices' in mop_data and mop_data['devices']:
+                        self._save_devices(mop_id, mop_data['devices'])
+                    
+                    if 'networkConfigs' in mop_data and mop_data['networkConfigs']:
+                        self._save_network_configs(mop_id, mop_data['networkConfigs'])
+                    
+                    if 'risks' in mop_data and mop_data['risks']:
+                        self._save_risk_assessments(mop_id, mop_data['risks'])
+                
+                print(f"✅ MOP {mop_id} saved successfully with comprehensive field mapping")
+                return {'id': mop_id, 'status': 'success'}
             
-            # Save devices
-            if 'devices' in mop_data:
-                self._save_devices(mop_id, mop_data['devices'])
-            
-            # Save network configs
-            if 'networkConfigs' in mop_data:
-                self._save_network_configs(mop_id, mop_data['networkConfigs'])
-            
-            # Save risk assessments
-            if 'risks' in mop_data:
-                self._save_risk_assessments(mop_id, mop_data['risks'])
-            
-            return {'id': mop_id, 'status': 'success'}
+            return None
             
         except Exception as e:
-            print(f"Error saving MOP to database: {e}")
+            print(f"❌ Error saving MOP to database: {e}")
+            import traceback
+            traceback.print_exc()
             return None
-    
     def _save_devices(self, mop_id, devices):
         """Save devices to database"""
         for idx, device in enumerate(devices):

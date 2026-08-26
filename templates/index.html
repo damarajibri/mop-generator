@@ -138,6 +138,62 @@
             font-size: 14px;
             line-height: 1.5;
             resize: vertical;
+        }
+        
+        /* History MOP Styles */
+        .history-reload-btn {
+            background: none;
+            border: none;
+            color: #28a745;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 5px 8px;
+            border-radius: 4px;
+        }
+        .history-reload-btn:hover {
+            background-color: #28a745;
+            color: white;
+            transform: rotate(180deg);
+        }
+        .history-reload-btn:active {
+            transform: rotate(180deg) scale(0.95);
+        }
+        #historyTable th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            text-align: center;
+        }
+        #historyTable tbody tr {
+            transition: all 0.2s ease;
+        }
+        #historyTable tbody tr:hover {
+            background-color: rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        #historyTable td {
+            vertical-align: middle;
+            border-color: #e9ecef;
+        }
+        .history-title {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        .history-activity {
+            color: #6c757d;
+            font-style: italic;
+        }
+        .pagination-sm .page-link {
+            border-radius: 0.25rem;
+            margin: 0 2px;
+        }
+        .pagination-sm .page-item.active .page-link {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+        }
             min-height: 150px;
             max-height: 500px;
             overflow-y: auto;
@@ -234,6 +290,11 @@
                 <div class="col-12">
                     <ul class="nav nav-pills nav-fill" id="mainTabs" style="font-size: 0.9rem;">
                         <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#history-section">
+                                <i class="fas fa-history"></i><br>History MOP
+                            </button>
+                        </li>
+                        <li class="nav-item">
                             <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#document-section">
                                 <i class="fas fa-file-alt"></i><br>Document Info
                             </button>
@@ -289,6 +350,76 @@
 
             <!-- Tab Content -->
             <div class="tab-content">
+                <!-- History MOP -->
+                <div class="tab-pane fade" id="history-section">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5><i class="fas fa-history"></i> History MOP</h5>
+                            <button type="button" class="btn btn-primary btn-sm" id="refreshHistoryBtn">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <!-- Loading indicator -->
+                            <div id="historyLoading" class="text-center py-4" style="display: none;">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Loading MOP history...</p>
+                            </div>
+
+                            <!-- History table -->
+                            <div class="table-responsive" id="historyTableContainer">
+                                <table class="table table-striped table-hover" id="historyTable">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th style="width: 8%;">No.</th>
+                                            <th style="width: 40%;">Document Title</th>
+                                            <th style="width: 37%;">Activity Name</th>
+                                            <th style="width: 15%;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="historyTableBody">
+                                        <!-- Data will be loaded via JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Pagination controls -->
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center">
+                                        <label for="historyPageSize" class="form-label me-2 mb-0">Show:</label>
+                                        <select class="form-select form-select-sm" id="historyPageSize" style="width: auto;">
+                                            <option value="10">10</option>
+                                            <option value="20">20</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                        <span class="ms-2 text-muted">entries</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <nav aria-label="History pagination">
+                                        <ul class="pagination pagination-sm justify-content-end mb-0" id="historyPagination">
+                                            <!-- Pagination will be generated via JavaScript -->
+                                        </ul>
+                                    </nav>
+                                </div>
+                            </div>
+
+                            <!-- Info display -->
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <small class="text-muted" id="historyInfo">
+                                        <!-- Info text will be updated via JavaScript -->
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Document Info -->
                 <div class="tab-pane fade show active" id="document-section">
                     <div class="card">
@@ -1144,7 +1275,7 @@
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle"></i> 
                                 <strong>Device-Based Implementation:</strong> Configuration steps will be generated for each device defined in Technical Configuration tab.
-                                <button type="button" class="btn btn-outline-primary btn-sm ms-2" onclick="generateDeviceImplementation()">
+                                <button type="button" class="btn btn-outline-primary btn-sm ms-2" onclick="generateDeviceImplementationWithValidation(event)">
                                     <i class="fas fa-sync"></i> Refresh Device List
                                 </button>
                             </div>
@@ -2700,173 +2831,194 @@ exit"></textarea>
             container.appendChild(newItem);
         }
 
-        // Dynamic Device Implementation Generation
+        // Enhanced Dynamic Device Implementation Generation
         function generateDeviceImplementation() {
-            const devices = collectDeviceData();
-            const container = document.getElementById('deviceImplementationContainer');
+            console.log('🔄 generateDeviceImplementation started');
             
-            if (devices.length === 0) {
-                container.innerHTML = `
-                    <div class="text-warning text-center p-4">
-                        <i class="fas fa-exclamation-triangle"></i> 
-                        No devices found. Please add devices in the Technical Configuration tab first.
-                    </div>
-                `;
+            // Show loading state
+            const container = document.getElementById('deviceImplementationContainer');
+            if (!container) {
+                console.error('❌ deviceImplementationContainer not found');
                 return;
             }
-
-            // Store existing editor content before regenerating
-            const existingContent = {};
-            devices.forEach((_, index) => {
-                if (quillManager && quillManager.editors.has(`preEditor_${index}`)) {
-                    existingContent[`preEditor_${index}`] = quillManager.getCompleteEditorData(`preEditor_${index}`);
-                    existingContent[`implEditor_${index}`] = quillManager.getCompleteEditorData(`implEditor_${index}`);
-                    existingContent[`verifyEditor_${index}`] = quillManager.getCompleteEditorData(`verifyEditor_${index}`);
-                    existingContent[`rollbackEditor_${index}`] = quillManager.getCompleteEditorData(`rollbackEditor_${index}`);
+            
+            container.innerHTML = `
+                <div class="text-center p-4">
+                    <i class="fas fa-spinner fa-spin text-primary"></i>
+                    <div class="mt-2">Loading devices and generating implementation steps...</div>
+                </div>
+            `;
+            
+            // Use enhanced collectDeviceData with retry
+            collectDeviceDataWithRetry().then(devices => {
+                if (devices.length === 0) {
+                    console.log('⚠️  No devices found after retry attempts');
+                    container.innerHTML = `
+                        <div class="alert alert-warning text-center p-4">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            <h6 class="mt-2">No devices found</h6>
+                            <p class="mb-3">Please ensure devices are loaded in the Technical Configuration tab first.</p>
+                            <div class="d-flex gap-2 justify-content-center">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="switchToTechnicalConfig()">
+                                    <i class="fas fa-arrow-left"></i> Go to Technical Config
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="generateDeviceImplementation()">
+                                    <i class="fas fa-sync"></i> Try Again
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    return;
                 }
-            });
-
-            let implementationHTML = '';
-            devices.forEach((device, index) => {
-                const deviceType = device.type || 'Device';
-                const deviceName = device.hostname || `Device ${index + 1}`;
-                const isPaloAlto = device.type === 'palo_alto' || device.type === 'firewall';
                 
-                implementationHTML += `
-                    <div class="device-implementation mb-5 p-4 border border-info rounded">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-server"></i> ${deviceType.toUpperCase()}: ${deviceName}
-                            <span class="badge bg-info ms-2">${device.mgmt_ip || 'No IP'}</span>
-                        </h6>
-                        
-                        <!-- Pre-Implementation Section -->
-                        <div class="implementation-section mb-4">
-                            <h6 class="text-secondary">
-                                <i class="fas fa-clipboard-check"></i> Pre-Implementation Commands
-                            </h6>
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="rich-editor-container" style="height: 200px;">
-                                        <div id="preEditor_${index}" class="rich-editor"></div>
-                                        <textarea name="device_pre_commands_${index}" style="display: none;"></textarea>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    ${createImageUploadSection(index, 'pre', 'Pre-Implementation')}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Implementation Section -->
-                        <div class="implementation-section mb-4">
-                            <h6 class="text-warning">
-                                <i class="fas fa-cogs"></i> Implementation Commands
-                            </h6>
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="rich-editor-container" style="height: 200px;">
-                                        <div id="implEditor_${index}" class="rich-editor"></div>
-                                        <textarea name="device_impl_commands_${index}" style="display: none;"></textarea>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    ${createImageUploadSection(index, 'impl', 'Implementation')}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Verification Section -->
-                        <div class="implementation-section mb-4">
-                            <h6 class="text-success">
-                                <i class="fas fa-check-circle"></i> Verification Commands
-                            </h6>
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="rich-editor-container" style="height: 150px;">
-                                        <div id="verifyEditor_${index}" class="rich-editor"></div>
-                                        <textarea name="device_verify_commands_${index}" style="display: none;"></textarea>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    ${createImageUploadSection(index, 'verify', 'Verification Results')}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Rollback Section -->
-                        <div class="implementation-section mb-4">
-                            <h6 class="text-danger">
-                                <i class="fas fa-undo"></i> Rollback Commands
-                            </h6>
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="rich-editor-container" style="height: 150px;">
-                                        <div id="rollbackEditor_${index}" class="rich-editor"></div>
-                                        <textarea name="device_rollback_commands_${index}" style="display: none;"></textarea>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    ${createImageUploadSection(index, 'rollback', 'Rollback Evidence')}
-                                </div>
-                            </div>
-                        </div>
+                console.log(`✅ Processing ${devices.length} devices for implementation`);
 
-                        <!-- Device Configuration Summary -->
-                        <div class="device-summary p-3 bg-light rounded">
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <label class="form-label"><i class="fas fa-clock"></i> Estimated Duration</label>
-                                    <input type="text" class="form-control" name="device_duration_${index}" 
-                                           placeholder="30 minutes">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label"><i class="fas fa-user"></i> Responsible Engineer</label>
-                                    <input type="text" class="form-control" name="device_engineer_${index}" 
-                                           placeholder="Engineer name">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label"><i class="fas fa-exclamation-triangle"></i> Risk Level</label>
-                                    <select class="form-select" name="device_risk_${index}">
-                                        <option value="low">Low Risk</option>
-                                        <option value="medium" selected>Medium Risk</option>
-                                        <option value="high">High Risk</option>
-                                        <option value="critical">Critical Risk</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label"><i class="fas fa-flag"></i> Change Window</label>
-                                    <select class="form-select" name="device_window_${index}">
-                                        <option value="maintenance">Maintenance Window</option>
-                                        <option value="business_hours">Business Hours</option>
-                                        <option value="emergency">Emergency Change</option>
-                                        <option value="planned">Planned Outage</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-12">
-                                    <label class="form-label"><i class="fas fa-sticky-note"></i> Implementation Notes</label>
-                                    <textarea class="form-control" name="device_notes_${index}" rows="2" 
-                                              placeholder="Special considerations, dependencies, or notes for this device..."></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Device Image Gallery Summary -->
-                        <div class="device-images-summary mt-3">
-                            <h6 class="text-muted">
-                                <i class="fas fa-images"></i> Attached Images Summary
-                                <span class="badge bg-secondary" id="imageCount_${index}">0</span>
-                            </h6>
-                            <div class="small text-muted">
-                                Images will be included in the final MOP document for reference and audit purposes.
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
+                // Store existing editor content before regenerating
+                const existingContent = {};
+                devices.forEach((_, index) => {
+                    if (quillManager && quillManager.editors.has(`preEditor_${index}`)) {
+                        existingContent[`preEditor_${index}`] = quillManager.getCompleteEditorData(`preEditor_${index}`);
+                        existingContent[`implEditor_${index}`] = quillManager.getCompleteEditorData(`implEditor_${index}`);
+                        existingContent[`verifyEditor_${index}`] = quillManager.getCompleteEditorData(`verifyEditor_${index}`);
+                        existingContent[`rollbackEditor_${index}`] = quillManager.getCompleteEditorData(`rollbackEditor_${index}`);
+                    }
+                });
 
-            container.innerHTML = implementationHTML;
+                let implementationHTML = '';
+                devices.forEach((device, index) => {
+                    const deviceType = device.type || 'Device';
+                    const deviceName = device.hostname || `Device ${index + 1}`;
+                    const isPaloAlto = device.type === 'palo_alto' || device.type === 'firewall';
+                    
+                    console.log(`📝 Generating implementation for: ${deviceName} (${deviceType})`);
+                    
+                    implementationHTML += `
+                        <div class="device-implementation mb-5 p-4 border border-info rounded">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-server"></i> ${deviceType.toUpperCase()}: ${deviceName}
+                                <span class="badge bg-info ms-2">${device.mgmt_ip || 'No IP'}</span>
+                            </h6>
+                        
+                            <!-- Pre-Implementation Section -->
+                            <div class="implementation-section mb-4">
+                                <h6 class="text-secondary">
+                                    <i class="fas fa-clipboard-check"></i> Pre-Implementation Commands
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="rich-editor-container" style="height: 200px;">
+                                            <div id="preEditor_${index}" class="rich-editor"></div>
+                                            <textarea name="device_pre_commands_${index}" style="display: none;"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        ${createImageUploadSection(index, 'pre', 'Pre-Implementation')}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Implementation Section -->
+                            <div class="implementation-section mb-4">
+                                <h6 class="text-warning">
+                                    <i class="fas fa-cogs"></i> Implementation Commands
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="rich-editor-container" style="height: 200px;">
+                                            <div id="implEditor_${index}" class="rich-editor"></div>
+                                            <textarea name="device_impl_commands_${index}" style="display: none;"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        ${createImageUploadSection(index, 'impl', 'Implementation')}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Verification Section -->
+                            <div class="implementation-section mb-4">
+                                <h6 class="text-success">
+                                    <i class="fas fa-check-circle"></i> Verification Commands
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="rich-editor-container" style="height: 150px;">
+                                            <div id="verifyEditor_${index}" class="rich-editor"></div>
+                                            <textarea name="device_verify_commands_${index}" style="display: none;"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        ${createImageUploadSection(index, 'verify', 'Verification Results')}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Rollback Section -->
+                            <div class="implementation-section mb-4">
+                                <h6 class="text-danger">
+                                    <i class="fas fa-undo"></i> Rollback Commands
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="rich-editor-container" style="height: 150px;">
+                                            <div id="rollbackEditor_${index}" class="rich-editor"></div>
+                                            <textarea name="device_rollback_commands_${index}" style="display: none;"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        ${createImageUploadSection(index, 'rollback', 'Rollback Evidence')}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Device Configuration Summary -->
+                            <div class="device-summary p-3 bg-light rounded">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <label class="form-label"><i class="fas fa-clock"></i> Estimated Duration</label>
+                                        <input type="text" class="form-control" name="device_duration_${index}" 
+                                               placeholder="30 minutes">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label"><i class="fas fa-user"></i> Responsible Engineer</label>
+                                        <input type="text" class="form-control" name="device_engineer_${index}" 
+                                               placeholder="Engineer name">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label"><i class="fas fa-exclamation-triangle"></i> Risk Level</label>
+                                        <select class="form-select" name="device_risk_${index}">
+                                            <option value="low">Low Risk</option>
+                                            <option value="medium" selected>Medium Risk</option>
+                                            <option value="high">High Risk</option>
+                                            <option value="critical">Critical Risk</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label"><i class="fas fa-shield-alt"></i> Backup Required</label>
+                                        <select class="form-select" name="device_backup_${index}">
+                                            <option value="yes" selected>Yes - Create Backup</option>
+                                            <option value="no">No - No Backup Needed</option>
+                                            <option value="existing">Existing Backup Available</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Device Image Gallery Summary -->
+                            <div class="device-images-summary mt-3">
+                                <h6 class="text-muted">
+                                    <i class="fas fa-images"></i> Attached Images Summary
+                                    <span class="badge bg-secondary" id="imageCount_${index}">0</span>
+                                </h6>
+                                <div class="small text-muted">
+                                    Images will be included in the final MOP document for reference and audit purposes.
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = implementationHTML;
             
             // Initialize Quill editors for each device with proper cleanup
             devices.forEach((_, index) => {
@@ -2903,26 +3055,189 @@ exit"></textarea>
                     updateImageCounter(index);
                 }, 200 + (index * 50)); // Staggered initialization
             });
+            
+            console.log(`✅ Implementation generated successfully for ${devices.length} devices`);
+            });
+        }
+
+        // Helper function untuk switch ke Technical Config tab
+        function switchToTechnicalConfig() {
+            const techTab = document.querySelector('[data-bs-target="#technical-section"]');
+            if (techTab) {
+                const tab = new bootstrap.Tab(techTab);
+                tab.show();
+                console.log('📋 Switched to Technical Config tab');
+            }
+        }
+
+        // Enhanced button handler dengan validation dan loading state
+        function generateDeviceImplementationWithValidation(event) {
+            console.log('🔄 generateDeviceImplementationWithValidation started');
+            
+            const btn = event.target.closest('button');
+            const originalHTML = btn.innerHTML;
+            
+            // Show loading state
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Devices...';
+            
+            // Enhanced debugging
+            console.log('📋 Current tab check...');
+            const activeTab = document.querySelector('.nav-link.active');
+            const currentTabText = activeTab ? activeTab.textContent.trim() : 'Unknown';
+            console.log(`Current active tab: "${currentTabText}"`);
+            
+            // Check device container visibility
+            const deviceContainer = document.getElementById('deviceInventory');
+            if (deviceContainer) {
+                const isVisible = deviceContainer.offsetParent !== null;
+                console.log(`Device container visible: ${isVisible}`);
+            }
+            
+            // Quick pre-check for devices
+            console.log('🔍 Quick device pre-check...');
+            const quickDevices = collectDeviceData();
+            
+            if (quickDevices.length === 0) {
+                console.log('⚠️  Quick check: No devices found, will retry with delay');
+                
+                // Show different loading message
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching for Devices...';
+                
+                // Switch to Technical Config tab to ensure devices are visible
+                const techTab = document.querySelector('[data-bs-target="#technical-section"]');
+                if (techTab && !techTab.classList.contains('active')) {
+                    console.log('📋 Switching to Technical Config to check devices...');
+                    const tab = new bootstrap.Tab(techTab);
+                    tab.show();
+                    
+                    setTimeout(() => {
+                        const devicesAfterSwitch = collectDeviceData();
+                        console.log(`📊 Devices after tab switch: ${devicesAfterSwitch.length}`);
+                        
+                        // Switch back to Implementation tab
+                        const implTab = document.querySelector('[data-bs-target="#implementation-section"]');
+                        if (implTab) {
+                            const implTabInstance = new bootstrap.Tab(implTab);
+                            implTabInstance.show();
+                        }
+                        
+                        // Retry after delay to allow for any ongoing device loading
+                        setTimeout(() => {
+                            generateDeviceImplementation().then(() => {
+                                // Restore button state
+                                btn.disabled = false;
+                                btn.innerHTML = originalHTML;
+                            }).catch(() => {
+                                // Restore button state even on error
+                                btn.disabled = false;
+                                btn.innerHTML = originalHTML;
+                            });
+                        }, 800);
+                        
+                    }, 1000);
+                } else {
+                    // Already on tech tab or no tab switching needed
+                    setTimeout(() => {
+                        generateDeviceImplementation().then(() => {
+                            // Restore button state
+                            btn.disabled = false;
+                            btn.innerHTML = originalHTML;
+                        }).catch(() => {
+                            // Restore button state even on error
+                            btn.disabled = false;
+                            btn.innerHTML = originalHTML;
+                        });
+                    }, 800);
+                }
+            } else {
+                console.log(`✅ Quick check: Found ${quickDevices.length} devices, proceeding immediately`);
+                
+                // Devices found, proceed immediately
+                setTimeout(() => {
+                    generateDeviceImplementation();
+                    
+                    // Restore button state
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                }, 300);
+            }
         }
 
         function collectDeviceData() {
             const devices = [];
+            
+            console.log('🔍 collectDeviceData: Starting device collection...');
+            
+            // Check if we're on the right tab
+            const techTab = document.querySelector('[data-bs-target="#technical-section"]');
+            const isOnTechnicalTab = techTab && techTab.classList.contains('active');
+            console.log(`📋 Technical Config tab active: ${isOnTechnicalTab}`);
+            
             const hostnames = document.querySelectorAll('[name="device_hostname[]"]');
+            console.log(`🔍 collectDeviceData: Found ${hostnames.length} hostname fields`);
+            
+            if (hostnames.length === 0) {
+                console.warn('⚠️  No hostname fields found - checking container...');
+                const deviceContainer = document.getElementById('deviceInventory');
+                if (deviceContainer) {
+                    console.log('✅ Device container found, but no hostname fields inside');
+                    const deviceItems = deviceContainer.querySelectorAll('.device-item');
+                    console.log(`📊 Device items in container: ${deviceItems.length}`);
+                } else {
+                    console.warn('❌ Device container not found');
+                }
+                return devices;
+            }
             
             hostnames.forEach((hostnameInput, index) => {
                 const typeInputs = document.querySelectorAll('[name="device_type[]"]');
                 const mgmtIPInputs = document.querySelectorAll('[name="device_mgmt_ip[]"]');
                 
-                if (hostnameInput.value.trim()) {
-                    devices.push({
-                        hostname: hostnameInput.value,
-                        type: typeInputs[index]?.value || '',
-                        mgmt_ip: mgmtIPInputs[index]?.value || ''
-                    });
+                const hostnameValue = hostnameInput.value ? hostnameInput.value.trim() : '';
+                const typeValue = typeInputs[index] ? typeInputs[index].value : '';
+                const ipValue = mgmtIPInputs[index] ? mgmtIPInputs[index].value : '';
+                
+                console.log(`🔍 Device ${index + 1} check:`);
+                console.log(`   Hostname: "${hostnameValue}" (${hostnameValue ? 'HAS VALUE' : 'EMPTY'})`);
+                console.log(`   Type: "${typeValue}"`);
+                console.log(`   IP: "${ipValue}"`);
+                
+                if (hostnameValue) {
+                    const device = {
+                        hostname: hostnameValue,
+                        type: typeValue,
+                        mgmt_ip: ipValue
+                    };
+                    
+                    devices.push(device);
+                    console.log(`✅ Device ${index + 1} collected: ${device.hostname} (${device.type})`);
+                } else {
+                    console.log(`🔸 Device ${index + 1} skipped: no hostname`);
                 }
             });
             
+            console.log(`📊 Total devices collected: ${devices.length}`);
             return devices;
+        }
+
+        // Enhanced collectDeviceData with retry mechanism
+        function collectDeviceDataWithRetry(retryCount = 0, maxRetries = 3) {
+            console.log(`🔄 collectDeviceDataWithRetry attempt ${retryCount + 1}/${maxRetries + 1}`);
+            
+            const devices = collectDeviceData();
+            
+            if (devices.length === 0 && retryCount < maxRetries) {
+                console.log(`⚠️  No devices found, retrying in 300ms...`);
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        collectDeviceDataWithRetry(retryCount + 1, maxRetries).then(resolve);
+                    }, 300);
+                });
+            }
+            
+            console.log(`🎯 Final result: ${devices.length} devices after ${retryCount + 1} attempts`);
+            return Promise.resolve(devices);
         }
 
         // Quill Rich Text Editor Management
@@ -3664,7 +3979,709 @@ write memory`;
                     pasteArea.focus();
                 }
             });
+            
+            // History MOP functionality
+            initializeHistoryMOP();
         });
+        
+        // History MOP Functions
+        let currentHistoryPage = 1;
+        let currentPageSize = 10;
+        
+        function initializeHistoryMOP() {
+            // Load history when tab is shown
+            document.querySelector('[data-bs-target="#history-section"]').addEventListener('shown.bs.tab', function() {
+                loadMOPHistory(1, currentPageSize);
+            });
+            
+            // Refresh button
+            document.getElementById('refreshHistoryBtn').addEventListener('click', function() {
+                loadMOPHistory(currentHistoryPage, currentPageSize);
+            });
+            
+            // Page size change
+            document.getElementById('historyPageSize').addEventListener('change', function() {
+                currentPageSize = parseInt(this.value);
+                currentHistoryPage = 1;
+                loadMOPHistory(currentHistoryPage, currentPageSize);
+            });
+        }
+        
+        function loadMOPHistory(page = 1, pageSize = 10) {
+            currentHistoryPage = page;
+            currentPageSize = pageSize;
+            
+            // Show loading
+            document.getElementById('historyLoading').style.display = 'block';
+            document.getElementById('historyTableContainer').style.display = 'none';
+            
+            fetch(`/api/mop_history?page=${page}&page_size=${pageSize}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading
+                    document.getElementById('historyLoading').style.display = 'none';
+                    document.getElementById('historyTableContainer').style.display = 'block';
+                    
+                    if (data.success) {
+                        displayHistoryData(data.data);
+                        updateHistoryPagination(data.pagination);
+                        updateHistoryInfo(data.pagination);
+                    } else {
+                        showHistoryError(data.message || 'Failed to load history');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading history:', error);
+                    document.getElementById('historyLoading').style.display = 'none';
+                    document.getElementById('historyTableContainer').style.display = 'block';
+                    showHistoryError('Network error loading history');
+                });
+        }
+        
+        function displayHistoryData(historyData) {
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+            
+            if (historyData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                            <h5>No MOP Documents Found</h5>
+                            <p>Start by creating your first MOP document in the Document Info tab.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            historyData.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="text-center">${item.no}</td>
+                    <td class="history-title">${escapeHtml(item.title)}</td>
+                    <td class="history-activity">${escapeHtml(item.activity_name)}</td>
+                    <td class="text-center">
+                        <button type="button" 
+                                class="history-reload-btn" 
+                                onclick="reloadMOPData('${item.id}')"
+                                title="Load this MOP into form"
+                                data-mop-id="${item.id}">
+                            <i class="fas fa-redo-alt"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function updateHistoryPagination(pagination) {
+            const paginationContainer = document.getElementById('historyPagination');
+            paginationContainer.innerHTML = '';
+            
+            const { current_page, total_pages, has_previous, has_next } = pagination;
+            
+            // Previous button
+            const prevItem = document.createElement('li');
+            prevItem.className = `page-item ${!has_previous ? 'disabled' : ''}`;
+            prevItem.innerHTML = `
+                <a class="page-link" href="#" onclick="${has_previous ? `loadMOPHistory(${current_page - 1}, ${currentPageSize})` : 'return false'}">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            `;
+            paginationContainer.appendChild(prevItem);
+            
+            // Page numbers
+            let startPage = Math.max(1, current_page - 2);
+            let endPage = Math.min(total_pages, startPage + 4);
+            
+            if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageItem = document.createElement('li');
+                pageItem.className = `page-item ${i === current_page ? 'active' : ''}`;
+                pageItem.innerHTML = `
+                    <a class="page-link" href="#" onclick="loadMOPHistory(${i}, ${currentPageSize})">${i}</a>
+                `;
+                paginationContainer.appendChild(pageItem);
+            }
+            
+            // Next button
+            const nextItem = document.createElement('li');
+            nextItem.className = `page-item ${!has_next ? 'disabled' : ''}`;
+            nextItem.innerHTML = `
+                <a class="page-link" href="#" onclick="${has_next ? `loadMOPHistory(${current_page + 1}, ${currentPageSize})` : 'return false'}">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            `;
+            paginationContainer.appendChild(nextItem);
+        }
+        
+        function updateHistoryInfo(pagination) {
+            const { current_page, page_size, total_count } = pagination;
+            const start = ((current_page - 1) * page_size) + 1;
+            const end = Math.min(current_page * page_size, total_count);
+            
+            document.getElementById('historyInfo').textContent = 
+                `Showing ${start} to ${end} of ${total_count} entries`;
+        }
+        
+        function showHistoryError(message) {
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center text-danger py-4">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3 d-block"></i>
+                        <h5>Error Loading History</h5>
+                        <p>${escapeHtml(message)}</p>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="loadMOPHistory(1, currentPageSize)">
+                            <i class="fas fa-retry"></i> Try Again
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        function reloadMOPData(mopId) {
+            console.log('🔄 Loading MOP data for ID:', mopId);
+            
+            // Show loading notification
+            const reloadBtn = document.querySelector(`[data-mop-id="${mopId}"]`);
+            if (!reloadBtn) {
+                console.error('❌ Reload button not found for ID:', mopId);
+                showNotification('Button not found', 'error');
+                return;
+            }
+            
+            const originalIcon = reloadBtn.innerHTML;
+            reloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            reloadBtn.disabled = true;
+            
+            const apiUrl = `/api/mop_detail/${mopId}`;
+            console.log('🌐 Fetching from:', apiUrl);
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+                .then(response => {
+                    console.log('📡 Response status:', response.status);
+                    console.log('📡 Response headers:', response.headers);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('📄 Response data:', data);
+                    
+                    // Restore button
+                    reloadBtn.innerHTML = originalIcon;
+                    reloadBtn.disabled = false;
+                    
+                    if (data.success) {
+                        console.log('✅ MOP data loaded successfully');
+                        
+                        // Load data into form
+                        loadDataIntoForm(data.data);
+                        
+                        // Enhanced tab switching - give user choice
+                        setTimeout(() => {
+                            // Switch to Document Info tab first (for consistency)
+                            const documentTab = document.querySelector('[data-bs-target="#document-section"]');
+                            if (documentTab) {
+                                const tab = new bootstrap.Tab(documentTab);
+                                tab.show();
+                                console.log('📋 Switched to Document Info tab');
+                                
+                                // Then wait and switch to Technical Config to help user see the loaded data
+                                setTimeout(() => {
+                                    const techTab = document.querySelector('[data-bs-target="#technical-section"]');
+                                    if (techTab) {
+                                        const techTabInstance = new bootstrap.Tab(techTab);
+                                        techTabInstance.show();
+                                        console.log('🔧 Auto-switched to Technical Config tab to show loaded data');
+                                        
+                                        // Show additional notification about Technical Config
+                                        showNotification('Technical Config data loaded! Check all tabs for complete data.', 'info');
+                                    }
+                                }, 1500); // Wait 1.5 seconds before switching to tech config
+                                
+                            } else {
+                                console.warn('⚠️  Document tab not found');
+                            }
+                        }, 500); // Wait 0.5 seconds for initial form loading
+                        
+                        // Show success notification
+                        showNotification('MOP data loaded successfully!', 'success');
+                    } else {
+                        console.error('❌ API returned error:', data.message);
+                        showNotification(data.message || 'Failed to load MOP data', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Network/Parse error:', error);
+                    
+                    // Restore button
+                    reloadBtn.innerHTML = originalIcon;
+                    reloadBtn.disabled = false;
+                    
+                    let errorMessage = 'Network error loading MOP data';
+                    
+                    // More specific error messages
+                    if (error.message.includes('HTTP')) {
+                        errorMessage = `Server error: ${error.message}`;
+                    } else if (error.message.includes('JSON')) {
+                        errorMessage = 'Invalid response format';
+                    } else if (error.message.includes('NetworkError')) {
+                        errorMessage = 'Network connection failed';
+                    } else if (error.message.includes('TypeError')) {
+                        errorMessage = 'Request failed to send';
+                    }
+                    
+                    showNotification(errorMessage, 'error');
+                });
+        }
+        
+        function loadDataIntoForm(mopData) {
+            console.log('📝 Loading data into form:', mopData);
+            
+            try {
+                // Helper function to set field value safely with enhanced debugging and retry
+                function setFieldValue(fieldId, value, logName, retryCount = 0) {
+                    if (value !== null && value !== undefined && value !== '') {
+                        const element = document.getElementById(fieldId);
+                        if (element) {
+                            // Check if element is visible and ready
+                            if (element.offsetParent === null && retryCount < 3) {
+                                // Element not visible, retry after delay
+                                setTimeout(() => {
+                                    setFieldValue(fieldId, value, logName, retryCount + 1);
+                                }, 200 * (retryCount + 1));
+                                return false;
+                            }
+                            
+                            element.value = value;
+                            console.log(`✅ ${logName} loaded:`, value);
+                            return true;
+                        } else {
+                            console.warn(`⚠️  Field not found: ${fieldId} (for ${logName})`);
+                            
+                            // Retry finding element (might not be rendered yet)
+                            if (retryCount < 2) {
+                                setTimeout(() => {
+                                    setFieldValue(fieldId, value, logName, retryCount + 1);
+                                }, 300);
+                            }
+                        }
+                    } else {
+                        console.log(`🔸 ${logName} - no data (value: ${value})`);
+                    }
+                    return false;
+                }
+                
+                // Helper function to set checkbox value safely
+                function setCheckboxValue(fieldId, value, logName) {
+                    const element = document.getElementById(fieldId);
+                    if (element) {
+                        element.checked = Boolean(value);
+                        console.log(`✅ ${logName} loaded:`, Boolean(value));
+                        return true;
+                    } else {
+                        console.warn(`⚠️  Checkbox not found: ${fieldId}`);
+                    }
+                    return false;
+                }
+
+                // === DOCUMENT INFO SECTION ===
+                console.log('📋 Loading Document Info...');
+                setFieldValue('document_title', mopData.document_title, 'Title');
+                setFieldValue('version', mopData.version, 'Version');
+                setFieldValue('category', mopData.category, 'Category');
+                setFieldValue('activity_name', mopData.activity_name, 'Activity Name');
+                setFieldValue('work_type', mopData.work_type, 'Work Type');
+                setFieldValue('issue_date', mopData.issue_date, 'Issue Date');
+                
+                // === SUMMARY SECTION ===
+                console.log('📄 Loading Summary...');
+                setFieldValue('execution_time', mopData.execution_time, 'Execution Time');
+                setFieldValue('total_duration', mopData.total_duration, 'Total Duration');
+                setFieldValue('affected_services', mopData.affected_services, 'Affected Services');
+                setFieldValue('downtime', mopData.downtime, 'Downtime');
+                setFieldValue('summary', mopData.executive_summary || mopData.summary, 'Summary');
+                
+                // === TECHNICAL CONFIG - PREREQUISITES (with delayed loading) ===
+                setTimeout(() => {
+                    console.log('🔧 Loading Technical Prerequisites...');
+                    let techConfigLoaded = 0;
+                    techConfigLoaded += setFieldValue('hardware_requirements', mopData.hardware_requirements, 'Hardware Requirements') ? 1 : 0;
+                    techConfigLoaded += setFieldValue('software_dependencies', mopData.software_dependencies, 'Software Dependencies') ? 1 : 0;
+                    techConfigLoaded += setFieldValue('network_prerequisites', mopData.network_prerequisites, 'Network Prerequisites') ? 1 : 0;
+                    techConfigLoaded += setFieldValue('security_requirements', mopData.security_requirements, 'Security Requirements') ? 1 : 0;
+                    techConfigLoaded += setFieldValue('personnel_requirements', mopData.personnel_requirements, 'Personnel Requirements') ? 1 : 0;
+                    techConfigLoaded += setFieldValue('external_dependencies', mopData.external_dependencies, 'External Dependencies') ? 1 : 0;
+                    console.log(`🔧 Technical Prerequisites: ${techConfigLoaded}/6 fields loaded`);
+                }, 200);
+                
+                // === RISK ASSESSMENT ===
+                console.log('⚠️  Loading Risk Assessment...');
+                setFieldValue('overall_risk_level', mopData.overall_risk_level, 'Overall Risk Level');
+                setFieldValue('risk_owner', mopData.risk_owner, 'Risk Owner');
+                setFieldValue('contingency_plan', mopData.contingency_plan, 'Contingency Plan');
+                
+                // === IMPLEMENTATION TIMELINE (with delayed loading) ===
+                setTimeout(() => {
+                    console.log('⏰ Loading Implementation Timeline...');
+                    let timelineLoaded = 0;
+                    timelineLoaded += setFieldValue('prep_start_time', mopData.prep_start_time, 'Prep Start Time') ? 1 : 0;
+                    timelineLoaded += setFieldValue('prep_phase_duration', mopData.prep_phase_duration, 'Prep Duration') ? 1 : 0;
+                    timelineLoaded += setFieldValue('prep_activities', mopData.prep_activities, 'Prep Activities') ? 1 : 0;
+                    timelineLoaded += setFieldValue('impl_start_time', mopData.impl_start_time, 'Implementation Start Time') ? 1 : 0;
+                    timelineLoaded += setFieldValue('impl_phase_duration', mopData.impl_phase_duration, 'Implementation Duration') ? 1 : 0;
+                    timelineLoaded += setFieldValue('impl_activities', mopData.impl_activities, 'Implementation Activities') ? 1 : 0;
+                    timelineLoaded += setFieldValue('verification_start_time', mopData.verification_start_time, 'Verification Start Time') ? 1 : 0;
+                    timelineLoaded += setFieldValue('verification_duration', mopData.verification_duration, 'Verification Duration') ? 1 : 0;
+                    timelineLoaded += setFieldValue('verification_activities', mopData.verification_activities, 'Verification Activities') ? 1 : 0;
+                    console.log(`⏰ Implementation Timeline: ${timelineLoaded}/9 fields loaded`);
+                }, 400);
+                
+                // === COMMUNICATION PLAN (with delayed loading) ===
+                setTimeout(() => {
+                    console.log('📢 Loading Communication Plan...');
+                    let commLoaded = 0;
+                    commLoaded += setFieldValue('communication_frequency', mopData.communication_frequency, 'Communication Frequency') ? 1 : 0;
+                    commLoaded += setFieldValue('notification_list', mopData.notification_list, 'Notification List') ? 1 : 0;
+                    commLoaded += setFieldValue('technical_success_criteria', mopData.technical_success_criteria, 'Technical Success Criteria') ? 1 : 0;
+                    commLoaded += setFieldValue('business_success_criteria', mopData.business_success_criteria, 'Business Success Criteria') ? 1 : 0;
+                    console.log(`📢 Communication Plan: ${commLoaded}/4 fields loaded`);
+                }, 600);
+                
+                // === POST-IMPLEMENTATION ===
+                console.log('📊 Loading Post-Implementation...');
+                setFieldValue('monitoring_duration', mopData.monitoring_duration, 'Monitoring Duration');
+                setFieldValue('monitoring_frequency', mopData.monitoring_frequency, 'Monitoring Frequency');
+                setFieldValue('monitoring_team', mopData.monitoring_team, 'Monitoring Team');
+                
+                // === ROLLBACK PROCEDURES (with delayed loading) ===
+                setTimeout(() => {
+                    console.log('🔄 Loading Rollback Procedures...');
+                    let rollbackLoaded = 0;
+                    rollbackLoaded += setFieldValue('rollback_commands', mopData.rollback_commands, 'Rollback Commands') ? 1 : 0;
+                    rollbackLoaded += setFieldValue('service_impact_level', mopData.service_impact_level, 'Service Impact Level') ? 1 : 0;
+                    rollbackLoaded += setFieldValue('affected_processes', mopData.affected_processes, 'Affected Processes') ? 1 : 0;
+                    rollbackLoaded += setFieldValue('business_impact_cost', mopData.business_impact_cost, 'Business Impact Cost') ? 1 : 0;
+                    rollbackLoaded += setFieldValue('system_impact_level', mopData.system_impact_level, 'System Impact Level') ? 1 : 0;
+                    rollbackLoaded += setFieldValue('affected_systems', mopData.affected_systems, 'Affected Systems') ? 1 : 0;
+                    rollbackLoaded += setFieldValue('recovery_time_objective', mopData.recovery_time_objective, 'Recovery Time Objective') ? 1 : 0;
+                    console.log(`🔄 Rollback Procedures: ${rollbackLoaded}/7 fields loaded`);
+                }, 800);
+                setFieldValue('rollback_technical_validation', mopData.rollback_technical_validation, 'Rollback Technical Validation');
+                setFieldValue('rollback_business_validation', mopData.rollback_business_validation, 'Rollback Business Validation');
+                
+                // === APPROVAL SIGNATURES ===
+                console.log('✍️  Loading Approval Signatures...');
+                setFieldValue('tech_reviewer_name', mopData.tech_reviewer_name, 'Tech Reviewer Name');
+                setFieldValue('tech_reviewer_position', mopData.tech_reviewer_position, 'Tech Reviewer Position');
+                setFieldValue('tech_reviewer_contact', mopData.tech_reviewer_contact, 'Tech Reviewer Contact');
+                setFieldValue('tech_review_date', mopData.tech_review_date, 'Tech Review Date');
+                setFieldValue('manager_name', mopData.manager_name, 'Manager Name');
+                setFieldValue('manager_position', mopData.manager_position, 'Manager Position');
+                setFieldValue('manager_contact', mopData.manager_contact, 'Manager Contact');
+                setFieldValue('manager_approval_date', mopData.manager_approval_date, 'Manager Approval Date');
+                setFieldValue('final_approver_name', mopData.final_approver_name, 'Final Approver Name');
+                setFieldValue('final_approver_title', mopData.final_approver_title, 'Final Approver Title');
+                setFieldValue('final_approver_contact', mopData.final_approver_contact, 'Final Approver Contact');
+                setFieldValue('final_approval_date', mopData.final_approval_date, 'Final Approval Date');
+                
+                // === IMPLEMENTATION STATUS ===
+                console.log('📋 Loading Implementation Status...');
+                setFieldValue('implementation_status', mopData.implementation_status, 'Implementation Status');
+                setFieldValue('actual_start_time', mopData.actual_start_time, 'Actual Start Time');
+                setFieldValue('actual_end_time', mopData.actual_end_time, 'Actual End Time');
+                setFieldValue('implementation_notes', mopData.implementation_notes, 'Implementation Notes');
+                
+                // === CERTIFICATION CHECKBOXES ===
+                console.log('✅ Loading Certifications...');
+                setCheckboxValue('cert_technical', mopData.cert_technical, 'Technical Certification');
+                setCheckboxValue('cert_testing', mopData.cert_testing, 'Testing Certification');
+                setCheckboxValue('cert_documentation', mopData.cert_documentation, 'Documentation Certification');
+                setCheckboxValue('cert_stakeholder', mopData.cert_stakeholder, 'Stakeholder Certification');
+                
+                // === TECHNICAL DETAILS ===
+                console.log('🔧 Loading Technical Details...');
+                setFieldValue('service_name', mopData.service_name, 'Service Name');
+                setFieldValue('service_version', mopData.service_version, 'Service Version');
+                setFieldValue('service_ports', mopData.service_ports, 'Service Ports');
+                setFieldValue('config_file_paths', mopData.config_file_paths, 'Config File Paths');
+                setFieldValue('database_connections', mopData.database_connections, 'Database Connections');
+                setFieldValue('admin_accounts', mopData.admin_accounts, 'Admin Accounts');
+                setFieldValue('auth_method', mopData.auth_method, 'Auth Method');
+                setFieldValue('firewall_rules', mopData.firewall_rules, 'Firewall Rules');
+                setFieldValue('ssl_certificates', mopData.ssl_certificates, 'SSL Certificates');
+                
+                // === BACKUP & RECOVERY ===
+                console.log('💾 Loading Backup & Recovery...');
+                setFieldValue('backup_locations', mopData.backup_locations, 'Backup Locations');
+                setFieldValue('backup_commands', mopData.backup_commands, 'Backup Commands');
+                setFieldValue('rpo_target', mopData.rpo_target, 'RPO Target');
+                setFieldValue('rto_target', mopData.rto_target, 'RTO Target');
+                setFieldValue('environment_type', mopData.environment_type, 'Environment Type');
+                setFieldValue('datacenter_location', mopData.datacenter_location, 'Datacenter Location');
+                setFieldValue('maintenance_window', mopData.maintenance_window, 'Maintenance Window');
+                
+                // === DEVICES (form-based population) ===
+                if (mopData.devices && mopData.devices.length > 0) {
+                    console.log('📱 Loading devices into form:', mopData.devices.length);
+                    
+                    // Clear existing device items (keep first one, remove others)
+                    const deviceContainer = document.getElementById('deviceInventory');
+                    if (deviceContainer) {
+                        const deviceItems = deviceContainer.querySelectorAll('.device-item');
+                        // Remove all but the first device item
+                        for (let i = 1; i < deviceItems.length; i++) {
+                            deviceItems[i].remove();
+                        }
+                        
+                        // Populate devices into form
+                        mopData.devices.forEach((device, index) => {
+                            // Add new device item if needed
+                            if (index > 0) {
+                                if (typeof addDeviceItem === 'function') {
+                                    addDeviceItem();
+                                } else {
+                                    console.warn('⚠️  addDeviceItem function not found');
+                                    return;
+                                }
+                            }
+                            
+                            // Wait a bit for DOM to update if adding new item
+                            setTimeout(() => {
+                                const deviceItems = deviceContainer.querySelectorAll('.device-item');
+                                const currentItem = deviceItems[index];
+                                
+                                if (currentItem) {
+                                    // Populate device fields
+                                    const hostnameField = currentItem.querySelector('[name="device_hostname[]"]');
+                                    const typeField = currentItem.querySelector('[name="device_type[]"]');
+                                    const mgmtIpField = currentItem.querySelector('[name="device_mgmt_ip[]"]');
+                                    const modelSerialField = currentItem.querySelector('[name="device_model_serial[]"]');
+                                    const locationField = currentItem.querySelector('[name="device_location[]"]');
+                                    
+                                    if (hostnameField) hostnameField.value = device.hostname || device.name || '';
+                                    if (typeField) typeField.value = device.type || '';
+                                    if (mgmtIpField) mgmtIpField.value = device.mgmt_ip || device.ip || '';
+                                    if (modelSerialField) modelSerialField.value = device.model_serial || '';
+                                    if (locationField) locationField.value = device.location || '';
+                                    
+                                    console.log(`✅ Device ${index + 1} loaded: ${device.hostname || device.name}`);
+                                } else {
+                                    console.warn(`⚠️  Device item ${index} not found in DOM`);
+                                }
+                            }, 100 * index); // Stagger the population
+                        });
+                        
+                        console.log('✅ Devices populated into form');
+                        
+                        // Auto-refresh implementation if on Implementation tab
+                        setTimeout(() => {
+                            const implTab = document.querySelector('[data-bs-target="#implementation-section"]');
+                            if (implTab && implTab.classList.contains('active')) {
+                                console.log('🔄 Auto-refreshing implementation after device loading');
+                                generateDeviceImplementation();
+                            } else {
+                                console.log('💡 Implementation tab not active, will refresh when switched');
+                            }
+                        }, 1000); // Wait for all device population to complete
+                    } else {
+                        console.warn('⚠️  Device inventory container not found');
+                    }
+                } else {
+                    console.log('🔸 No devices to load');
+                }
+                
+                // === NETWORK CONFIGS (form-based population) ===
+                if (mopData.networkConfigs && mopData.networkConfigs.length > 0) {
+                    console.log('🌐 Loading network configs into form:', mopData.networkConfigs.length);
+                    
+                    // Find network config container
+                    const networkContainer = document.getElementById('ipZoneAddresses');
+                    if (networkContainer) {
+                        const networkItems = networkContainer.querySelectorAll('.ip-zone-item');
+                        // Remove all but the first network item
+                        for (let i = 1; i < networkItems.length; i++) {
+                            networkItems[i].remove();
+                        }
+                        
+                        // Populate network configs into form
+                        mopData.networkConfigs.forEach((config, index) => {
+                            // Add new network item if needed
+                            if (index > 0) {
+                                if (typeof addIPZoneConfiguration === 'function') {
+                                    addIPZoneConfiguration();
+                                } else {
+                                    console.warn('⚠️  addIPZoneConfiguration function not found');
+                                    return;
+                                }
+                            }
+                            
+                            // Wait a bit for DOM to update if adding new item
+                            setTimeout(() => {
+                                const networkItems = networkContainer.querySelectorAll('.ip-zone-item');
+                                const currentItem = networkItems[index];
+                                
+                                if (currentItem) {
+                                    console.log(`🔍 Populating network config ${index + 1}:`, config);
+                                    
+                                    // Parse Real IP (might contain subnet)
+                                    const realIp = config.realIp || '';
+                                    const [realIpAddr, realSubnet] = realIp.includes('/') ? realIp.split('/') : [realIp, ''];
+                                    
+                                    // Parse NAT IP (might contain subnet) 
+                                    const natIp = config.natIp || '';
+                                    const [natIpAddr, natSubnet] = natIp.includes('/') ? natIp.split('/') : [natIp, ''];
+                                    
+                                    // Populate network config fields with correct selectors
+                                    const fields = {
+                                        'real_ip_address[]': realIpAddr,
+                                        'real_ip_subnet[]': realSubnet ? '/' + realSubnet : '',
+                                        'nat_ip_address[]': natIpAddr,
+                                        'nat_ip_subnet[]': natSubnet ? '/' + natSubnet : '',
+                                        'real_zone_name[]': config.paloAltoZone || '',
+                                        'vlan_id[]': config.vlanId || '',
+                                        'ip_description[]': config.description || ''
+                                    };
+                                    
+                                    let fieldsPopulated = 0;
+                                    
+                                    for (const [fieldName, fieldValue] of Object.entries(fields)) {
+                                        const field = currentItem.querySelector(`[name="${fieldName}"]`);
+                                        if (field && fieldValue) {
+                                            field.value = fieldValue;
+                                            fieldsPopulated++;
+                                            console.log(`  ✅ ${fieldName}: "${fieldValue}"`);
+                                        } else if (!field) {
+                                            console.warn(`  ⚠️  Field not found: ${fieldName}`);
+                                        } else {
+                                            console.log(`  🔸 ${fieldName}: empty`);
+                                        }
+                                    }
+                                    
+                                    console.log(`✅ Network config ${index + 1} loaded: ${realIp} -> ${natIp} (${fieldsPopulated}/7 fields)`);
+                                } else {
+                                    console.warn(`⚠️  Network config item ${index} not found in DOM`);
+                                }
+                            }, 200 * (index + 1)); // More generous timing
+                        });
+                        
+                        console.log('✅ Network configs population initiated');
+                    } else {
+                        console.warn('⚠️  Network config container (ipZoneAddresses) not found');
+                    }
+                } else {
+                    console.log('🔸 No network configs to load');
+                }
+                
+                // === RISKS (existing code) ===
+                if (mopData.risks && mopData.risks.length > 0) {
+                    console.log('⚠️  Loading risks:', mopData.risks.length);
+                    
+                    if (typeof riskList !== 'undefined') {
+                        riskList.length = 0;
+                        mopData.risks.forEach(risk => {
+                            riskList.push({
+                                type: risk.type || 'technical',
+                                description: risk.description || '',
+                                impact: risk.impact || 1,
+                                probability: risk.probability || 1,
+                                mitigation: risk.mitigation || '',
+                                contingency: risk.contingency || ''
+                            });
+                        });
+                        
+                        if (typeof displayRisks === 'function') {
+                            displayRisks();
+                            console.log('✅ Risks refreshed');
+                        }
+                    } else {
+                        console.warn('⚠️  riskList variable not found');
+                    }
+                }
+                
+                // === LOADING SUMMARY (delayed to wait for all sections) ===
+                setTimeout(() => {
+                    console.log(`\\n📊 TECHNICAL CONFIG LOADING SUMMARY (FINAL):`);
+                    console.log(`   All delayed loading operations completed`);
+                    console.log(`   Check Technical Config tab for loaded data`);
+                    console.log(`   If fields still empty, check browser_debug.js output`);
+                    
+                    // Final check of critical fields
+                    const criticalFields = [
+                        'hardware_requirements', 'software_dependencies', 'network_prerequisites',
+                        'prep_start_time', 'impl_start_time', 'verification_start_time',
+                        'technical_success_criteria', 'rollback_commands', 'communication_frequency'
+                    ];
+                    
+                    let finalCount = 0;
+                    criticalFields.forEach(fieldId => {
+                        const element = document.getElementById(fieldId);
+                        if (element && element.value && element.value.trim()) {
+                            finalCount++;
+                        }
+                    });
+                    
+                    const finalPercentage = Math.round((finalCount / criticalFields.length) * 100);
+                    console.log(`\\n🎯 FINAL RESULT: ${finalCount}/${criticalFields.length} critical Technical Config fields loaded (${finalPercentage}%)`);
+                    
+                    if (finalPercentage >= 70) {
+                        console.log(`✅ Technical Config reload SUCCESS!`);
+                    } else {
+                        console.log(`❌ Technical Config reload needs attention - check browser_debug.js`);
+                    }
+                    
+                }, 1200); // Wait for all delayed operations to complete
+                
+                console.log('✅ Form data loading initiated (Technical Config loading in progress...)');
+                
+            } catch (error) {
+                console.error('❌ Error loading form data:', error);
+                showNotification('Error loading some form data', 'error');
+            }
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Add to document
+            document.body.appendChild(notification);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 3000);
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
     </script>
 </body>
 </html>
