@@ -215,6 +215,16 @@ class MOPDatabase:
                     'rollback_technical_validation': mop_data.get('rollback_technical_validation'),
                     'rollback_business_validation': mop_data.get('rollback_business_validation'),
                     
+                    # Implementation Commands (NEW FIELDS)
+                    'general_implementation_commands': mop_data.get('general_implementation_commands'),
+                    'general_implementation_commands_html': mop_data.get('general_implementation_commands_html'),
+                    'pre_implementation_commands': mop_data.get('pre_implementation_commands'),
+                    'pre_implementation_commands_html': mop_data.get('pre_implementation_commands_html'),
+                    'implementation_commands': mop_data.get('implementation_commands'),
+                    'implementation_commands_html': mop_data.get('implementation_commands_html'),
+                    'verification_commands': mop_data.get('verification_commands'),
+                    'verification_commands_html': mop_data.get('verification_commands_html'),
+                    
                     # Approval Signatures
                     'tech_reviewer_name': mop_data.get('tech_reviewer_name'),
                     'tech_reviewer_position': mop_data.get('tech_reviewer_position'),
@@ -264,8 +274,19 @@ class MOPDatabase:
                             cursor.execute(f"UPDATE mop_documents SET {field_name} = ? WHERE id = ?", 
                                          (field_value, mop_id))
                             updated_count += 1
+                            
+                            # Debug logging for Implementation Commands
+                            if 'command' in field_name.lower():
+                                print(f"✅ Updated {field_name}: {field_value[:50]}...")
+                                
                         except Exception as e:
                             print(f"⚠️  Failed to update {field_name}: {e}")
+                            
+                            # Extra debug for Implementation Commands
+                            if 'command' in field_name.lower():
+                                print(f"   Field: {field_name}")
+                                print(f"   Value: {repr(field_value)}")
+                                print(f"   MOP ID: {mop_id}")
                 
                 print(f"✅ Updated {updated_count} extended fields")
                 

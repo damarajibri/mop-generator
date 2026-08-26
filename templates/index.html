@@ -2121,8 +2121,19 @@ exit"></textarea>
 
                 // Get content from Quill editor for general implementation commands
                 if (quillManager && quillManager.editors.has('generalImplEditor')) {
-                    data.general_implementation_commands = quillManager.getEditorContent('generalImplEditor');
-                    data.general_implementation_commands_html = quillManager.getEditorHTML('generalImplEditor');
+                    // Implementation Commands - with fallback to textarea if Quill not ready
+                    const generalImplTextarea = document.getElementById('general_implementation_commands');
+                    if (typeof quillManager !== 'undefined' && quillManager.getEditor('generalImplEditor')) {
+                        data.general_implementation_commands = quillManager.getEditorContent('generalImplEditor');
+                        data.general_implementation_commands_html = quillManager.getEditorHTML('generalImplEditor');
+                    } else if (generalImplTextarea) {
+                        // Fallback to textarea if Quill not available
+                        data.general_implementation_commands = generalImplTextarea.value;
+                        data.general_implementation_commands_html = `<div class="code-block">${generalImplTextarea.value.replace(/\n/g, '<br>')}</div>`;
+                        console.log('⚠️  Using textarea fallback for general_implementation_commands');
+                    } else {
+                        console.warn('⚠️  Neither Quill editor nor textarea found for general_implementation_commands');
+                    }
                     data.general_editor_images = quillManager.extractImagesFromEditor('generalImplEditor');
                 }
 
@@ -4370,6 +4381,47 @@ write memory`;
                 setFieldValue('monitoring_frequency', mopData.monitoring_frequency, 'Monitoring Frequency');
                 setFieldValue('monitoring_team', mopData.monitoring_team, 'Monitoring Team');
                 
+                // === IMPLEMENTATION COMMANDS (with delayed loading for rich editors) ===
+                setTimeout(() => {
+                    console.log('🔧 Loading Implementation Commands...');
+                    let implCommandsLoaded = 0;
+                    
+                    // Load general implementation commands (rich editor)
+                    if (mopData.general_implementation_commands) {
+                        // Set textarea value (hidden field)
+                        setFieldValue('general_implementation_commands', mopData.general_implementation_commands, 'General Implementation Commands');
+                        
+                        // Set rich editor content if Quill is available
+                        if (typeof quillManager !== 'undefined' && quillManager.getEditor('generalImplEditor')) {
+                            const editor = quillManager.getEditor('generalImplEditor');
+                            if (mopData.general_implementation_commands_html) {
+                                editor.root.innerHTML = mopData.general_implementation_commands_html;
+                            } else {
+                                editor.setText(mopData.general_implementation_commands);
+                            }
+                            console.log('✅ General Implementation Commands loaded to rich editor');
+                        }
+                        implCommandsLoaded++;
+                    }
+                    
+                    // Load pre-implementation commands (currently no UI field, but store for future)
+                    if (mopData.pre_implementation_commands) {
+                        console.log('🔸 Pre-Implementation Commands data available (no UI field yet)');
+                    }
+                    
+                    // Load implementation commands (currently no UI field, but store for future)  
+                    if (mopData.implementation_commands) {
+                        console.log('🔸 Implementation Commands data available (no UI field yet)');
+                    }
+                    
+                    // Load verification commands (currently no UI field, but store for future)
+                    if (mopData.verification_commands) {
+                        console.log('🔸 Verification Commands data available (no UI field yet)');
+                    }
+                    
+                    console.log(`🔧 Implementation Commands: ${implCommandsLoaded}/1 fields loaded (rich editor)`);
+                }, 1000);
+                
                 // === ROLLBACK PROCEDURES (with delayed loading) ===
                 setTimeout(() => {
                     console.log('🔄 Loading Rollback Procedures...');
@@ -4382,7 +4434,7 @@ write memory`;
                     rollbackLoaded += setFieldValue('affected_systems', mopData.affected_systems, 'Affected Systems') ? 1 : 0;
                     rollbackLoaded += setFieldValue('recovery_time_objective', mopData.recovery_time_objective, 'Recovery Time Objective') ? 1 : 0;
                     console.log(`🔄 Rollback Procedures: ${rollbackLoaded}/7 fields loaded`);
-                }, 800);
+                }, 1200);
                 setFieldValue('rollback_technical_validation', mopData.rollback_technical_validation, 'Rollback Technical Validation');
                 setFieldValue('rollback_business_validation', mopData.rollback_business_validation, 'Rollback Business Validation');
                 
